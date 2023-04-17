@@ -100,7 +100,9 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
           (_) => _circulate(),
     );
 
+
     ros = Ros(url: 'ws://192.168.1.102:11311'); //101 104 102 11311
+    //var ros2 = RosNode('http://192.168.43.145:11311/', '192.168.43.92', 51235);
     chatter = Topic(
         ros: ros,
         name: '/chatter',
@@ -166,7 +168,7 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
 
     mobile_mode = Topic(
       ros: ros,
-      name: 'mobile_input',
+      name: 'mobile_mode',
       type: 'std_msgs/String',
     );
   }
@@ -209,12 +211,39 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
   }
   void publishMobileInput(String data) async {
     var config = RosConfig(
-      'pub_test', //to?
+      'turtlebot_controller', //to?
       'http://192.168.1.102:11311/',
-      '192.168.1.102',
-      11311,
+      '192.168.1.100', //client(phone) ip
+      51235, //11311 51235
     );
-    var client = RosClient(config);
+    try{
+      print('connect');
+      var client = RosClient(config);
+      print('client');
+      var msg = StdMsgsString();
+      msg.data = data;
+      print('msg');
+      var topic = RosTopic('mobile_input', msg);
+      print('topic');
+      var publisher = await client.register(topic,
+          publishInterval: Duration(milliseconds: 1000));
+      print('publisher');
+      publisher.startPublishing();
+      publisher.publishData();
+      /*var i = 0;
+      Timer.periodic(
+        Duration(milliseconds: 500),
+            (_) {
+          i += 1;
+          topic.msg.data = i.toString();
+        },
+      );*/
+      //publisher.stopPublishing();
+      print('done');
+    } catch (e) {
+      print(e);
+    }
+    /*var client = RosClient(config);
     var topic = RosTopic('mobile_input', StdMsgsString());
     await client.unsubscribe(topic);
     var msg = {data};
@@ -222,7 +251,8 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
     var publisher = RosPublisher(topic, msg.toString());
     // publisher.register();
     //var publisher = RosPublisher(topic, 11311, publishInterval: Duration(milliseconds: 100));
-    print('done published');
+    print('done published');*/
+
   }
 
   void publishCmd(double _linear_speed, double _angular_speed) async {
@@ -434,15 +464,9 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
                                       icon: Image.asset('assets/images/arrow_up.png'),
                                       iconSize: 50,
                                       onPressed: () {
-                                        //setState(() {
-                                        //ros.publishers();
-
                                         //mobile_input.publish("w");
-                                        //publishmsg("w");
                                         publishMobileInput("w");
-
-                                      //});
-                                      },
+                                        },
                                       alignment: Alignment.center,
                                     ),
                                     Row(
@@ -516,7 +540,7 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
                                         onPressed: () {
                                           isManual = false;
                                           isGraphical = true;
-                                          mobile_mode.publish('Graphical');
+                                          mobile_mode.publish('shape');
                                         }, //change page of camera to drawing
                                         child: const Text('Graphical')
                                     ),
@@ -527,8 +551,8 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
                                         ),
                                         onPressed: () {
                                           isManual = true;
-                                          isGraphical = false;
-                                          mobile_mode.publish('Manual');
+                                        isGraphical = false;
+                                          mobile_mode.publish('manual');
                                         }, //default, camera page
                                         child: const Text('Manual')
                                     ),
