@@ -42,12 +42,12 @@ class TurtleBot:
         self.odom = rospy.Subscriber('odom', Odometry, self.update_odometry)
         self.ObstaclePointPub=rospy.Publisher('/obstaclePoint',Float32MultiArray, queue_size = 10)
         rospy.Subscriber('/obstaclePoint', Float32MultiArray, self.ObstaclePointUpdate)
-        self.xy_input = rospy.Subscriber('mobile_input_xy',Float32,self.updateXY_input)
+        self.xy_input = rospy.Subscriber('mobile_input_xy',Float32MultiArray,self.updateXY_input)
         rospy.Subscriber('image_identified_moving_thing_in_front', Bool, self.update_moving_thing_alert)
         self.rate = rospy.Rate(10)
         
         rospy.Subscriber('mobile_mode',String,self.getMode_callback)
-        self.mode="shape"
+        self.mode="manual"
         self.moving_thing_bool = False
         self.position = None
         self.orientation = None
@@ -83,9 +83,9 @@ class TurtleBot:
         self.position = msg.pose.pose.position
         self.orientation = msg.pose.pose.orientation
 
-    def updateXY_input(self):
-        self.inputX=self.xy_input.data[0]
-        self.inputY=self.xy_input.data[1]
+    def updateXY_input(self, msg):
+        self.inputX=msg.data[0]
+        self.inputY=msg.data[1]
 
     def shutdown(self):
         rospy.loginfo("Stopping the robot...")
@@ -321,6 +321,7 @@ class TurtleBot:
                 #add obstacle avoidance in it
                 self.getObstacleMap()
                 cmd.linear.x ,cmd.angular.z = self.obstacleAvoidVel(cmd.linear.x,cmd.angular.z,'NAIVE')
+                '''
                 if self.obstacleMap[0]==1:
                     obsX=self.frontObstacleDistance*sin(theta)+self.position.x
                     obsY=self.frontObstacleDistance*cos(theta)+self.position.y
@@ -334,6 +335,7 @@ class TurtleBot:
                         msg=Float32MultiArray()
                         msg.data = [obsX,obsY]
                         self.ObstaclePointPub.publish(msg)
+                '''
 
             #publish
             self.cmd_vel.publish(cmd)
@@ -423,7 +425,6 @@ class TurtleBot:
                 return
 
 
-
         self.getObstacleMap()
         self.target_BURGER_MAX_LIN_VEL, self.target_angular_vel = self.obstacleAvoidVel(self.target_BURGER_MAX_LIN_VEL,self.target_angular_vel,"STOP")
         if self.target_BURGER_MAX_LIN_VEL==0.0:
@@ -432,6 +433,12 @@ class TurtleBot:
             self.control_angular_vel=0.0
 
         twist = Twist()
+        if self.moving_thing_bool==True:
+                print("Dynamic obstacle detected, standby now...")
+                twist.angular.z =0.0
+                twist.linear.x = 0.0
+                self.cmd_vel.publish(twist)
+                return
 
         self.control_BURGER_MAX_LIN_VEL = self.makeSimpleProfile(self.control_BURGER_MAX_LIN_VEL, self.target_BURGER_MAX_LIN_VEL, (LIN_VEL_STEP_SIZE/2.0))
         twist.linear.x = self.control_BURGER_MAX_LIN_VEL; twist.linear.y = 0.0; twist.linear.z = 0.0
