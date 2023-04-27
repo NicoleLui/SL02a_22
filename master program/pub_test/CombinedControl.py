@@ -391,6 +391,7 @@ class TurtleBot:
 
     def getKey_callback(self, newMobileInput):
         self.mobileInput= newMobileInput.data
+        print("newdata received",self.mobileInput)
 
 
     def getMode_callback(self, newMobileInput):
@@ -399,7 +400,7 @@ class TurtleBot:
         
     def manual_moveTo(self):
         if self.mobileInput == 'w' :
-                self.target_BURGER_MAX_LIN_VEL = self.checkLinearLimitVelocity(self.target_BURGER_MAX_LIN_VEL + LIN_VEL_STEP_SIZE)
+            self.target_BURGER_MAX_LIN_VEL = self.checkLinearLimitVelocity(self.target_BURGER_MAX_LIN_VEL + LIN_VEL_STEP_SIZE)
 
         elif self.mobileInput == 'x' :
             self.target_BURGER_MAX_LIN_VEL = self.checkLinearLimitVelocity(self.target_BURGER_MAX_LIN_VEL - LIN_VEL_STEP_SIZE)
@@ -424,6 +425,7 @@ class TurtleBot:
                 self.cmd_vel.publish(cmd)
                 return
 
+        self.mobileInput = ''
 
         self.getObstacleMap()
         self.target_BURGER_MAX_LIN_VEL, self.target_angular_vel = self.obstacleAvoidVel(self.target_BURGER_MAX_LIN_VEL,self.target_angular_vel,"STOP")
