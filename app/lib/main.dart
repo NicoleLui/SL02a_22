@@ -49,7 +49,8 @@ class MyHomePage extends StatefulWidget {
 
 const kCanvasSize = 150.0;
 ByteData? imgBytes;
-
+var count = 0;
+var robot_ns = 0;
 class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateMixin{
   late Ros ros;
   late Topic chatter;
@@ -223,22 +224,24 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
       var msg = StdMsgsString();
       msg.data = data;
       print('msg');
-      var topic = RosTopic('mobile_input', msg);
+      var topic = RosTopic('tb${robot_ns}/mobile_input_dir', msg);
+      //var topic = RosTopic('mobile_input', msg);
+      await client.unregister(topic);
       print('topic');
       var publisher = await client.register(topic,
           publishInterval: Duration(milliseconds: 1000));
       print('publisher');
       publisher.startPublishing();
       publisher.publishData();
-      /*var i = 0;
+      var i = 0;
       Timer.periodic(
         Duration(milliseconds: 500),
             (_) {
           i += 1;
           topic.msg.data = i.toString();
         },
-      );*/
-      //publisher.stopPublishing();
+      );
+      publisher.stopPublishing();
       print('done');
     } catch (e) {
       print(e);
@@ -308,10 +311,98 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
 
   bool isManual = false;
   bool isGraphical = true;
-  void toImage() async{
+  /*void toImage() async{
     //publish imgBytes
     final file = File('C:/Users/Nicole Lui/Desktop/HKUST/FYP/image_output/output.png');
     await file.writeAsBytes(imgBytes!.buffer.asInt8List());
+  }*/
+  void toImage(ByteData img) async{
+    //publish imgBytes
+    //final file = File('C:/Users/Nicole Lui/Desktop/HKUST/FYP/image_output/output.png');
+    //await file.writeAsBytes(imgBytes!.buffer.asInt8List());
+    var config = RosConfig(
+      'turtlebot_controller', //to?
+      'http://192.168.1.102:11311/',
+      '192.168.1.103', //client(phone) ip
+      51235, //11311 51235
+    );
+    // var i = 0;
+    try{
+      print('connect');
+      var client = RosClient(config);
+      print('client');
+      var msg = StdMsgsString();
+      msg.data = img.toString();
+      // count<=2? msg.data = data : msg.data = 'z';
+      print('msg');
+      var topic = RosTopic('mobile_drawing', msg);
+      await client.unregister(topic);
+      print('topic');
+      var publisher = await client.register(topic,
+          publishInterval: Duration(milliseconds: 1000));
+      mobile_drawing.advertise();
+
+      print('publisher');
+      publisher.startPublishing();
+      publisher.publishData();
+      count = count+1;
+      /*var i = 0;
+      Timer.periodic(
+        Duration(milliseconds: 1000),
+            (_) {
+          i += 1;
+          //topic.msg.data = i.toString();
+        },
+      );*/
+      // msg.data = 'z';
+      //publisher.stopPublishing();
+      print('done');
+    } catch (e) {
+      print(e);
+    }
+  }
+  
+  void publishMode(String data) async{
+    var config = RosConfig(
+      'turtlebot_controller', //to?
+      'http://192.168.1.102:11311/',
+      '192.168.1.103', //client(phone) ip
+      51235, //11311 51235
+    );
+    // var i = 0;
+    try{
+      print('connect');
+      var client = RosClient(config);
+      print('client');
+      var msg = StdMsgsString();
+      msg.data = data;
+      // count<=2? msg.data = data : msg.data = 'z';
+      print('msg');
+      var topic = RosTopic('mobile_mode', msg);
+      await client.unregister(topic);
+      print('topic');
+      var publisher = await client.register(topic,
+          publishInterval: Duration(milliseconds: 1000));
+      mobile_drawing.advertise();
+
+      print('publisher');
+      publisher.startPublishing();
+      publisher.publishData();
+      count = count+1;
+      /*var i = 0;
+      Timer.periodic(
+        Duration(milliseconds: 1000),
+            (_) {
+          i += 1;
+          //topic.msg.data = i.toString();
+        },
+      );*/
+      // msg.data = 'z';
+      //publisher.stopPublishing();
+      print('done');
+    } catch (e) {
+      print(e);
+    }
   }
 
   @override
@@ -406,7 +497,7 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
                                 }),
                               IconButton(
                                 icon: Icon(Icons.check),
-                                onPressed: toImage,
+                                onPressed: (){toImage(imgBytes!);},
                               ),
                             ]
                         )
@@ -540,7 +631,8 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
                                         onPressed: () {
                                           isManual = false;
                                           isGraphical = true;
-                                          mobile_mode.publish('shape');
+                                          // mobile_mode.publish('shape');
+                                          publishMode('shape');
                                         }, //change page of camera to drawing
                                         child: const Text('Graphical')
                                     ),
@@ -551,8 +643,9 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
                                         ),
                                         onPressed: () {
                                           isManual = true;
-                                        isGraphical = false;
-                                          mobile_mode.publish('manual');
+                                          isGraphical = false;
+                                          // mobile_mode.publish('manual');
+                                          publishMode('manual');
                                         }, //default, camera page
                                         child: const Text('Manual')
                                     ),
@@ -578,7 +671,38 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
                       this.destroyConnection();
                     }
                   },
-                )
+                ),
+                TextButton(
+                    style: TextButton.styleFrom(
+                      textStyle: const TextStyle(fontSize: 30),
+                      alignment: Alignment.centerLeft,
+                    ),
+                    onPressed: () {
+                      robot_ns = 101;
+                      //change camera & publish topic /tb_"robot_num"
+                    }, //change page of camera to drawing
+                    child: const Text('Connect robot 101')
+                ),
+                TextButton(
+                    style: TextButton.styleFrom(
+                      textStyle: const TextStyle(fontSize: 30),
+                      alignment: Alignment.centerLeft,
+                    ),
+                    onPressed: () {
+                      robot_ns = 104;
+                    },
+                    child: const Text('Connect robot 104')
+                ),
+                TextButton(
+                    style: TextButton.styleFrom(
+                      textStyle: const TextStyle(fontSize: 30),
+                      alignment: Alignment.centerLeft,
+                    ),
+                    onPressed: () {
+                      robot_ns = 105;
+                    },
+                    child: const Text('Connect robot 105')
+                ),
               ],
             )
           );
@@ -596,7 +720,7 @@ Widget getImagenBase64(String imagen) {
   return Image.memory(
     bytes,
     gaplessPlayback: true,
-    width: 400,
+    width: 200,
     fit: BoxFit.fitWidth,
   );
 }
@@ -610,11 +734,11 @@ class DrawingPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) async{
     final recorder = ui.PictureRecorder(); //!
     final canvas = Canvas(recorder,
-        Rect.fromPoints(Offset(0.0, -90.0), Offset(kCanvasSize, kCanvasSize)));
+        Rect.fromPoints(Offset(0.0, -30.0), Offset(kCanvasSize, kCanvasSize)));
 
     for (int i = 0; i < pointsList.length - 1; i++) {
       if (pointsList[i] != null && pointsList[i + 1] != null) {
-        canvas.drawLine(pointsList[i].points+Offset(0,-90), pointsList[i + 1].points+Offset(0,-90),
+        canvas.drawLine(pointsList[i].points+Offset(0,-30), pointsList[i + 1].points+Offset(0,-30),
             pointsList[i].paint);
       } else if (pointsList[i] != null && pointsList[i + 1] == null) {
         offsetPoints.clear();
